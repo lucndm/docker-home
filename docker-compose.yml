@@ -1,0 +1,60 @@
+version: '3'
+services: 
+  db:
+    container_name: db
+    image: timescale/timescaledb-postgis:latest-pg12
+    restart: always
+    networks: 
+      - docker-home
+    volumes: 
+      - ./data/postgresql/data:/var/lib/postgresql/data
+    ports: 
+      - "5432:5432"
+    env_file: 
+      - default.env
+  influxdb:
+    image: influxdb:1.8-alpine
+    container_name: influxdb
+    networks: 
+      - docker-home
+    restart: always
+    ports: 
+      - "8086:8086"
+    environment:
+      - INFLUXDB_DB=telegraf
+      - INFLUXDB_USER=telegraf
+    volumes:
+      - ./data/influxdb:/var/lib/influxdb
+  telegraf:
+    container_name: telegraf
+    image: telegraf:1.16.3-alpine
+    networks: 
+      - docker-home
+    restart: always
+    volumes:
+      - ./configs/telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro
+  kapacitor:
+    container_name: kapacitor
+    image: kapacitor:1.5.7-alpine
+    networks: 
+      - docker-home
+    env_file: 
+      - default.env
+    volumes: 
+      - ./data/kapacitor:/var/lib/kapacitor
+  chronograf:
+    image: chronograf:1.8-alpine
+    container_name: chronograf
+    networks: 
+      - docker-home
+    volumes: 
+      - ./data/chronograf:/var/lib/chronograf
+    depends_on:
+      - influxdb
+    ports:
+    - "8888:8888"
+    command:  chronograf --influxdb-url=http://influxdb:8086
+
+networks: 
+  docker-home:
+    external: true
