@@ -28,11 +28,16 @@ services:
   telegraf:
     container_name: telegraf
     image: telegraf:1.16.3-alpine
+    environment:
+      - HOST_PROC=/host/proc
     networks: 
       - docker-home
     restart: always
     volumes:
       - ./configs/telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro
+      - /proc:/host/proc:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /var/run/utmp:/var/run/utmp
   kapacitor:
     container_name: kapacitor
     image: kapacitor:1.5.7-alpine
@@ -40,11 +45,32 @@ services:
       - docker-home
     env_file: 
       - default.env
+    restart: always
     volumes: 
       - ./data/kapacitor:/var/lib/kapacitor
+  grafana:
+    container_name: grafana
+    image: grafana/grafana:latest
+    networks:
+      - docker-home
+    user: "root"
+    restart: always
+    env_file: 
+      - default.env
+    environment:
+      GF_SECURITY_ADMIN_USER: minhluc
+      GF_SECURITY_ADMIN_PASSWORD: minhluc
+    volumes: 
+      - ./configs/grafana/datasource.yaml:/etc/grafana/provisioning/datasources/datasource.yaml
+      - ./configs/grafana/dashboard.yaml:/etc/grafana/provisioning/dashboards/dashboard.yaml
+      - ./configs/grafana/DashboardTelegraf.json:/var/lib/grafana/dashboards/DashboardTelegraf.json
+      - ./data/grafana:/var/lib/grafana
+    ports:
+      - 3000:3000
   chronograf:
     image: chronograf:1.8-alpine
     container_name: chronograf
+    restart: always
     networks: 
       - docker-home
     volumes: 
